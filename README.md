@@ -1,7 +1,7 @@
 # binance
 Automatic trade system on Binance API
 
-Зарегистрируйтесь по моей ссылке https://www.binance.com/ru/register?ref=OG39WQGA в этом случае вы будете получать кешбек 10%
+Зарегистрируйтесь по моей ссылке https://www.binance.com/ru/register?ref=OG39WQGA в этом случае вы будете получать кешбэк 10%
 
 Пройдите верификацию аккаунта https://www.binance.com/ru/my/settings/profile
 
