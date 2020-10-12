@@ -37,22 +37,8 @@ const BinanceApp = function() {
     //this.socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr")
 
     this.init= function(){
-        let self = this
-        //this.timeCorrect()
 
-        // подключение базы данных
-        fs.readFile('db_config.json', 'utf8', function (err, data) {
-            if (err) throw err;
-               let obj = JSON.parse(data);
-               //console.log(obj)
-        });
 
-       // this.tick();
-
-       // this.getTickerArr(); //состояние рынка за 24 ч
-       //this.getChangeInfo() // получаем инфу по паре
-        
-        //this.getMyBalances(true)
         this.startTrade()
 
     }
