@@ -5,7 +5,7 @@ Automatic trade system on Binance API
 
 Пройдите верификацию аккаунта https://www.binance.com/ru/my/settings/profile
 
-
+https://www.binance.com/ru/usercenter/settings/api-management
 
 
     this.apikey= 'THERE IS YOUR API PUBLIC KEY'
