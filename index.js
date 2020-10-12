@@ -299,7 +299,7 @@ const BinanceApp = function() {
                         self.wallets[res.data[i].coin] = res.data[i].free
                          console.log('wallets',self.wallets)
             if(trade){
-                if(!self.tradeSym in self.wallets || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
+                if(self.wallets[self.tradeSym] == undefined || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
                     this.GetOrderList(this.symbol,true,'BUY') // стакан ордеров
                 }else{
                     this.GetOrderList(this.symbol,true,'SELL')
