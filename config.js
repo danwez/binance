@@ -1,6 +1,6 @@
 const config = {
-    apikey: '',
-    secret: '',
+    apikey: 'THERE IS YOUR API PUBLIC KEY',
+    secret: 'THERE IS YOUR API SECRET KEY',
     url: "https://api.binance.com",
     symbol : 'BNBUSDT', // Валютная пара
     tradeSym : 'BNB', // Валюта для торговли
