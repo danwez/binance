@@ -36,12 +36,14 @@ const BinanceApp = function() {
         for(let i in config)
             this[i] = config[i]
 
-        // подключение базы данных
+        // подключение базы данных 
+        /*
         fs.readFile('db_config.json', 'utf8', function (err, data) {
             if (err) throw err;
                let obj = JSON.parse(data);
                //console.log(obj)
         });
+        */
 
         console.log('Стартуем')
        // this.tick();
