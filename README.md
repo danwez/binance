@@ -8,17 +8,19 @@ Automatic trade system on Binance API
 Создайте ключ API
 https://www.binance.com/ru/usercenter/settings/api-management
 
-полученные значения ключей вставьте в файле index.js вот в эти строки:
-    this.apikey= 'THERE IS YOUR API PUBLIC KEY'
-    this.secret= 'THERE IS YOUR API SECRET KEY'
+полученные значения ключей вставьте в файле config.js вот в эти строки:
+    apikey: 'THERE IS YOUR API PUBLIC KEY',
+    secret: 'THERE IS YOUR API SECRET KEY',
     
 Дополнительные натройки можно проделать в данных строках
     
-    this.symbol = 'BNBUSDT' // Валютная пара
-    this.tradeSym = 'BNB' // Валюта для торговли
-    this.baseSym = 'USDT' // Базовая валюта
-    this.minSum = 0.001; // Минимально допустимое количество валюты для торговли
-    this.extrem = 50   // Страховой зазор до потолка за сутки в пунктах
+    symbol : 'BNBUSDT', // Валютная пара
+    tradeSym : 'BNB', // Валюта для торговли
+    baseSym : 'USDT', // Базовая валюта
+    minSum : 0.001, // Минимально допустимое количество валюты для торговли
+    extrem : 50,   // Страховой зазор до потолка за сутки в пунктах
+    lifeTime : 15 // Время жизни ордера на покупку в минутах
+    
 
 Для работы скрипта необходимо иметь установленную на компьютере nodejs.
 Скачать и установить отсюда https://nodejs.org/en/download/
