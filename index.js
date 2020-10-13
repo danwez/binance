@@ -240,7 +240,7 @@ const BinanceApp = function() {
                             askPrice: self.orderbook.asks[0],
                         })
                 }else{
-                    setTimeout(function(){self.getMyBalances(true)},3000)
+                    setTimeout(function(){self.getMyBalances(true)},5000)
                 }
             }
         })
@@ -267,11 +267,12 @@ const BinanceApp = function() {
                     self.startTrade()
                 }).catch((err)=>{
                     console.log(err)
-                    setTimeout(()=>{self.startTrade()})
+                    setTimeout(()=>{self.startTrade()},5000)
                 })
             else
                 setTimeout(() => {
-                    console.log('Торговля остановлена. До потолка ',self.ticketArr.h - price, ' минимум ',self.extrem * this.minSum * price)
+                    if(self.ticketArr)
+                        console.log('Торговля остановлена. До потолка ',self.ticketArr.h - price, ' минимум ',self.extrem * this.minSum * price)
 
                     self.startTrade()
                 }, 5000)
@@ -298,7 +299,7 @@ const BinanceApp = function() {
             self.startTrade()
         }).catch((err)=>{
             console.log(err)
-            setTimeout(()=>{self.startTrade()})
+            setTimeout(()=>{self.startTrade()},5000)
         })
         //console.log(orderParams)
     }
@@ -317,7 +318,7 @@ const BinanceApp = function() {
             self.startTrade()
         }).catch((err)=>{
             console.log(err)
-            setTimeout(()=>{self.startTrade()})
+            setTimeout(()=>{self.startTrade()},5000)
         })
         //console.log(orderParams)
     }
@@ -334,7 +335,7 @@ const BinanceApp = function() {
                         self.wallets[res.data[i].coin] = res.data[i].free
                          console.log('wallets',self.wallets)
             if(trade){
-                if(!self.tradeSym in self.wallets || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
+                if(self.wallets[self.tradeSym] == undefined || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
                     this.GetOrderList(this.symbol,true,'BUY') // стакан ордеров
                 }else{
                     this.GetOrderList(this.symbol,true,'SELL')
@@ -342,7 +343,7 @@ const BinanceApp = function() {
             } 
             }).catch((err)=>{
                 console.log(err)
-                setTimeout(()=>{self.startTrade()})
+                setTimeout(()=>{self.startTrade()},5000)
             })
         
     }
@@ -368,7 +369,7 @@ const BinanceApp = function() {
             return self.newOrders
         }).catch((err)=>{
             console.log(err)
-            setTimeout(()=>{self.startTrade()})
+            setTimeout(()=>{self.startTrade()},5000)
         })
 
     }
