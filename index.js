@@ -6,21 +6,14 @@ const WebSocket = require('ws')
 const qs = require('qs')
 const crypto = require('crypto')
 const mysql = require('mysql')
-  
+const config = require('./config')
+
   //getAllAccountOrders
   
 
 const BinanceApp = function() {
 
-    this.apikey= 'THERE IS YOUR API PUBLIC KEY'
-    this.secret= 'THERE IS YOUR API SECRET KEY'
-    this.url= "https://api.binance.com"
-    this.symbol = 'BNBUSDT' // Валютная пара
     this.exSymbols = []
-    this.tradeSym = 'BNB' // Валюта для торговли
-    this.baseSym = 'USDT' // Базовая валюта
-    this.minSum = 0.001; // Минимально допустимое количество валюты для торговли
-    this.extrem = 50   // Страховой зазор до потолка за сутки в пунктах
     this.orderbook= false
     this.maxOrderValumeAsk= 0
     this.maxOrderValumeBid= 0
@@ -37,8 +30,26 @@ const BinanceApp = function() {
     //this.socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr")
 
     this.init= function(){
+        let self = this
 
+        //установка конфигурации
+        for(let i in config)
+            this[i] = config[i]
 
+        // подключение базы данных
+        fs.readFile('db_config.json', 'utf8', function (err, data) {
+            if (err) throw err;
+               let obj = JSON.parse(data);
+               //console.log(obj)
+        });
+
+        console.log('Стартуем')
+       // this.tick();
+
+       // this.getTickerArr(); //состояние рынка за 24 ч
+       //this.getChangeInfo() // получаем инфу по паре
+        
+        //this.getMyBalances(true)
         this.startTrade()
 
     }
@@ -233,7 +244,7 @@ const BinanceApp = function() {
         })
     }
 
-    this.buyOrder = function(params){
+    this.buyOrder = function(params={}){
         self = this
         console.log('wal',this.wallets[this.baseSym],'sym ',this.baseSym,' stop ',params.bidStop[0])
         let price = Math.floor((params.bidStop[0]*1 + this.minSum * 2) * 1000) / 1000
@@ -248,23 +259,25 @@ const BinanceApp = function() {
         }
         let endpoint = '/api/v3/order'
         this.getTickerArr(()=>{
-            if(self.tradeAccess && self.ticketArr && self.ticketArr.h - price > self.extrem * this.minSum)
+            if(self.tradeAccess && self.ticketArr && self.ticketArr.h - price > self.extrem * this.minSum * price)
                 self.apiRequest(endpoint,orderParams,true,true,'POST').then(res => {
                     console.log(res.data)
                     self.startTrade()
                 }).catch((err)=>{
                     console.log(err)
+                    setTimeout(()=>{self.startTrade()})
                 })
             else
                 setTimeout(() => {
-                    console.log('Торговля остановлена')
+                    console.log('Торговля остановлена. До потолка ',self.ticketArr.h - price, ' минимум ',self.extrem * this.minSum * price)
+
                     self.startTrade()
                 }, 5000)
         })
         //console.log(orderParams)
     }
 
-    this.sellOrder = function(params){
+    this.sellOrder = function(params={}){
         self = this
         console.log('wal',this.wallets[this.tradeSym],'sym ',this.tradeSym,' stop ',params.askStop[0])
         let price = Math.floor((params.askStop[0]*1 - this.minSum * 2) * 1000) / 1000
@@ -283,6 +296,26 @@ const BinanceApp = function() {
             self.startTrade()
         }).catch((err)=>{
             console.log(err)
+            setTimeout(()=>{self.startTrade()})
+        })
+        //console.log(orderParams)
+    }
+
+    this.cancelOrder = function(symbol,orderId){
+        self = this
+        console.log('Отменям ордер ID=',orderId,' по паре ',symbol)
+        
+        let orderParams = {
+            symbol: symbol,
+            orderId: orderId,
+        }
+        let endpoint = '/api/v3/order'
+        this.apiRequest(endpoint,orderParams,true,true,'delete').then(res => {
+            console.log(res)
+            self.startTrade()
+        }).catch((err)=>{
+            console.log(err)
+            setTimeout(()=>{self.startTrade()})
         })
         //console.log(orderParams)
     }
@@ -299,7 +332,7 @@ const BinanceApp = function() {
                         self.wallets[res.data[i].coin] = res.data[i].free
                          console.log('wallets',self.wallets)
             if(trade){
-                if(self.wallets[self.tradeSym] == undefined || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
+                if(!self.tradeSym in self.wallets || self.wallets[self.tradeSym]<self.minSum){ // попытка купить валюту
                     this.GetOrderList(this.symbol,true,'BUY') // стакан ордеров
                 }else{
                     this.GetOrderList(this.symbol,true,'SELL')
@@ -307,6 +340,7 @@ const BinanceApp = function() {
             } 
             }).catch((err)=>{
                 console.log(err)
+                setTimeout(()=>{self.startTrade()})
             })
         
     }
@@ -320,13 +354,19 @@ const BinanceApp = function() {
             self.myHistory = res.data
             self.newOrders=[]
             for(let i in res.data){
-                if(res.data[i].status == 'NEW')
-                    self.newOrders.push(res.data[i])
+                if(res.data[i].status == 'NEW'){
+                    if(res.data[i].side == 'BUY' && Date.now() + self.timeCor - res.data[i].time > self.lifeTime * 60000)
+                        self.cancelOrder(res.data[i].symbol,res.data[i].orderId)
+                    else
+                        self.newOrders.push(res.data[i])
+                }
                 
             }
+            
             return self.newOrders
         }).catch((err)=>{
             console.log(err)
+            setTimeout(()=>{self.startTrade()})
         })
 
     }
