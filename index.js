@@ -112,16 +112,19 @@ const BinanceApp = function() {
                         })
                     }
                     if(result.s == 'BUY' && result.x == 'FILLED') // если выполнен ордер на покупку
-                        self.getMyOrders().then(res=>{
+                        self.getMyOrders().then(async res=>{
                             for(let i in self.newOrders){
                                 if(self.newOrders[i].symbol==result.s && 
                                    self.newOrders[i].side == 'SELL' &&
-                                   Date.now() + self.timeCor - self.newOrders[i].time > 60000){
-                                        self.cancelOrder(result.s,self.newOrders[i].orderId).then(res=>{
-                                            self.startTrade(true)
+                                   Date.now() + self.timeCor - self.newOrders[i].time > 60000)
+                                   {
+                                        await self.cancelOrder(result.s,self.newOrders[i].orderId).then(res=>{
+                                            console.log("Ордер на продажу отменен")
+                                            
                                         })
                                    }
                             }
+                            self.startTrade(true)
                         })
                         
 
