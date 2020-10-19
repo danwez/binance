@@ -152,10 +152,11 @@ const BinanceApp = function() {
         setTimeout(() => {
             self.apiRequest('/api/v3/userDataStream',{listenKey:key},false,false,'put',true)
                 .then(result => {
-                    console.log('prolongation ',Date.now())
+                    console.log('prolongation ',Date())
                     self.pingUserDataStream(key)
+                    self.checkOrderes()
                 }).catch((err)=>{ console.log(err) })
-        }, 1800000);
+        }, self.lifeTime * 60000);
     }
 
     this.apiRequest = async function(endPoint, data=null, timestamp=false, subscribe=false, method='GET',authHeadr=false){
@@ -192,6 +193,22 @@ const BinanceApp = function() {
         })
         
 
+    }
+
+    this.checkOrderes = () => {
+        self = this
+        this.getMyOrders().then((res)=>{
+            let renew = true
+            for(let i in self.newOrders){
+                if(self.newOrders[i].side == 'SELL')
+                    renew = false
+                else
+                    if( Data.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 )
+                        renew = false
+            }
+            if(renew)
+                self.cancelAllOrders(self.symbol).then((res)=>self.startTrade)
+        })
     }
 
     this.getChangeInfo = async function(){
