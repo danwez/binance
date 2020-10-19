@@ -6,8 +6,8 @@ const WebSocket = require('ws')
 
 const Arbitrage = function(){
 
-    this.ticketArr = []
-    this.dopSymbols = ['BTC','NEAR','ETH','XVS']
+    this.ticketArr = {}
+    this.dopSymbols = ['BTC','NEAR','ETH','XVS','RUB']
     this.quantity = 10
 
     this.init= function(){
@@ -24,6 +24,7 @@ const Arbitrage = function(){
        //this.getChangeInfo() // получаем инфу по паре
         
         //this.getMyBalances(true)
+        
         this.startTrade()
         //this.accountSocket()
 
@@ -37,24 +38,22 @@ const Arbitrage = function(){
         let self =this
         let socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr");
         let result = 0
-        self.ticketArr = null
+       // self.ticketArr = null
         socket.onmessage = function(message){
             result = JSON.parse(message.data)          
+            for(let i in result)
+                self.ticketArr[result[i].s] = result[i]
             
+            setTimeout(()=>socket.close(),5000)
             
-            socket.close();
         };
         socket.onclose = function(e){
             //self.testSymbol()
            // self.selectSymbol(result)
            //console.log(result)
-           self.checkSymbols(result)
-                for(let i in result)
-                    if(result[i].v > 50000 ){
-                        if(result[i].s.indexOf(self.tradeSym) > -1 )
-                        self.ticketArr = result[i]
-                        //console.log(result[i])
-                    }
+           
+           self.checkSymbols(self.ticketArr)
+
             
                 callback()
         }
@@ -75,15 +74,23 @@ const Arbitrage = function(){
             let trans1 = 0
             let trans2 = 0
             for (let a in ticketArr){
-                if(ticketArr[a].s.indexOf(this.tradeSym) > -1 && ticketArr[a].s.indexOf(this.dopSymbols[i]) > -1){
-                    trans1 = ticketArr[a].b * this.quantity
-                   // console.log('trans1',ticketArr[a])
+                //console.log(ticketArr[a])
+                if(ticketArr[a].s!=undefined && ticketArr[a].s.indexOf(this.tradeSym) > -1 && ticketArr[a].s.indexOf(this.dopSymbols[i]) > -1){
+                    if(ticketArr[a].s.indexOf(this.tradeSym)>1)
+                        trans1 = this.quantity / ticketArr[a].b
+                    else
+                        trans1 = this.quantity * ticketArr[a].b
+                    //console.log('trans1',ticketArr[a])
                 }
             }
             for (let a in ticketArr){
                 //console.log(ticketArr[a].s,' ',ticketArr[a].s.replace(this.baseSym,''))
                 if(ticketArr[a].s.replace(this.baseSym,'') == this.dopSymbols[i]){
-                    trans2 = trans1 * ticketArr[a].a
+                    if(ticketArr[a].s.indexOf(this.baseSym)>1)
+                        trans2 = trans1 * ticketArr[a].a
+                    else
+                        trans2 = trans1 / ticketArr[a].a
+                    //trans2 = trans1 * ticketArr[a].a
                     //console.log('trans2',ticketArr[a])
                 }    
                     
