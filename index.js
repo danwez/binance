@@ -95,7 +95,7 @@ const BinanceApp = function() {
             self.userDataStreem.socket.onopen = (event) => {
                 let stime = new Date()
                 console.log('socet is openned '+stime.toString())
-                
+                self.pingUserDataStream(self.userDataStreem.listenKey)
             }
             self.userDataStreem.socket.onmessage = function(message){
                 let result = JSON.parse(message.data)     
@@ -115,7 +115,7 @@ const BinanceApp = function() {
                             for(let i in self.newOrders){
                                 if(self.newOrders[i].symbol==result.s && 
                                    self.newOrders[i].side == 'SELL' &&
-                                   Date().now + self.timeCor - self.newOrders[i].time > 60000){
+                                   Date.now() + self.timeCor - self.newOrders[i].time > 60000){
                                         self.cancelOrder(result.s,self.newOrders[i].orderId).then(res=>{
                                             self.startTrade(true)
                                         })
@@ -137,13 +137,21 @@ const BinanceApp = function() {
                 self.startTrade()
             }
             self.userDataStreem.socket.onerror = (err) => { console.log(err)}
-            setTimeout(() => {
-                self.apiRequest('/api/v3/userDataStream',{listenKey:self.userDataStreem.listenKey},false,false,'put',true)
-                    .then(result => {console.log('prolongation')}).catch((err)=>{ console.log(err) })
-            }, 1800000);
+            
             return self.userDataStreem
         }).catch((err)=>{ console.log(err) })
         
+    }
+
+    this.pingUserDataStream = function(key){
+        self = this
+        setTimeout(() => {
+            self.apiRequest('/api/v3/userDataStream',{listenKey:key},false,false,'put',true)
+                .then(result => {
+                    console.log('prolongation ',Date.now())
+                    self.pingUserDataStream(key)
+                }).catch((err)=>{ console.log(err) })
+        }, 1800000);
     }
 
     this.apiRequest = async function(endPoint, data=null, timestamp=false, subscribe=false, method='GET',authHeadr=false){
