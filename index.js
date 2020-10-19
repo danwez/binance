@@ -203,7 +203,7 @@ const BinanceApp = function() {
                 if(self.newOrders[i].side == 'SELL')
                     renew = false
                 else
-                    if( Data.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 )
+                    if( Date.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 )
                         renew = false
             }
             if(renew)
