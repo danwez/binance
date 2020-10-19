@@ -207,7 +207,7 @@ const BinanceApp = function() {
                         renew = false
             }
             if(renew)
-                self.cancelAllOrders(self.symbol).then((res)=>self.startTrade)
+                self.cancelAllOrders(self.symbol).then((res)=>self.startTrade())
         })
     }
 
