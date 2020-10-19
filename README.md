@@ -9,6 +9,7 @@ Automatic trade system on Binance API
 https://www.binance.com/ru/usercenter/settings/api-management
 
 полученные значения ключей вставьте в файле config.js вот в эти строки:
+
     apikey: 'THERE IS YOUR API PUBLIC KEY',
     secret: 'THERE IS YOUR API SECRET KEY',
     
