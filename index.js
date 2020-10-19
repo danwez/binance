@@ -106,6 +106,7 @@ const BinanceApp = function() {
                 if(result.e == 'executionReport'){
                     if(result.S == 'SELL' && result.x != 'NEW')//если это продажный ордер и он не новый, значит отменяем пве нва покупку
                     {
+                        console.log('Отменяем все ордера')
                         self.cancelAllOrders(result.s).then(ress=>{
                             self.startTrade(true)
                         })
@@ -426,7 +427,7 @@ const BinanceApp = function() {
 
     this.cancelAllOrders = function(symbol){
          
-        this.apiRequest('api/v3/openOrders',{symbol:symbol},true,true,'delete').then(res => {
+        return this.apiRequest('api/v3/openOrders',{symbol:symbol},true,true,'delete').then(res => {
             console.log(res)
             
         }).catch((err)=>{
