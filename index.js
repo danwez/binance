@@ -97,6 +97,8 @@ const BinanceApp = function() {
                 console.log('socet is openned '+stime.toString())
                 self.pingUserDataStream(self.userDataStreem.listenKey)
             }
+
+
             self.userDataStreem.socket.onmessage = function(message){
                 let result = JSON.parse(message.data)     
                
@@ -111,7 +113,7 @@ const BinanceApp = function() {
                             self.startTrade(true)
                         })
                     }
-                    if(result.s == 'BUY' && result.x == 'FILLED') // если выполнен ордер на покупку
+                    if(result.S == 'BUY' && result.x == 'FILLED') // если выполнен ордер на покупку
                         self.getMyOrders().then(async res=>{
                             for(let i in self.newOrders){
                                 if(self.newOrders[i].symbol==result.s && 
@@ -124,7 +126,7 @@ const BinanceApp = function() {
                                         })
                                    }
                             }
-                            self.startTrade(true)
+                            self.getMyBalances(true)
                         })
                         
 
@@ -417,7 +419,7 @@ const BinanceApp = function() {
         }
         let endpoint = '/api/v3/order'
         this.apiRequest(endpoint,orderParams,true,true,'POST').then(res => {
-            console.log(res)
+            console.log(res.data)
             self.startTrade()
         }).catch((err)=>{
             console.log(err)
