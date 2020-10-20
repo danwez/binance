@@ -7,8 +7,8 @@ const WebSocket = require('ws')
 const Arbitrage = function(){
 
     this.ticketArr = {}
-    this.dopSymbols = ['BTC','NEAR','ETH','XVS','RUB']
-    this.quantity = 10
+    this.dopSymbols = ['BTC','ETH','IDRT','DAI','PAX','BCH','ZAR','AUD','NGN','EUR','ADA','LTC']
+    this.quantity = 1.7
 
     this.init= function(){
         let self = this
@@ -44,7 +44,7 @@ const Arbitrage = function(){
             for(let i in result)
                 self.ticketArr[result[i].s] = result[i]
             
-            setTimeout(()=>socket.close(),5000)
+            setTimeout(()=>socket.close(),10000)
             
         };
         socket.onclose = function(e){
@@ -64,7 +64,7 @@ const Arbitrage = function(){
         let etalone = 0
         for (let a in ticketArr){
             if(ticketArr[a].s == this.symbol){
-                etalone = ticketArr[a].b * this.quantity
+                etalone = ticketArr[a].b * this.quantity * 0.999
                 //console.log(ticketArr[a])
                 console.log("Можем продать по цене "+ticketArr[a].b+" и получить "+ etalone + ' ' +this.baseSym+ ' или:')
             }
@@ -95,7 +95,7 @@ const Arbitrage = function(){
                 }    
                     
             }
-            console.log('Купить '+trans1 +' '+ this.dopSymbols[i]+' и получить '+ trans2*0.998 +' '+this.baseSym)
+            console.log('Купить '+trans1 +' '+ this.dopSymbols[i]+' и получить '+ trans2*0.998 +' '+this.baseSym + ' выгода '+(trans2*0.998 - etalone))
         }
 
     }
