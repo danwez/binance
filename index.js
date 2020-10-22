@@ -114,9 +114,13 @@ const BinanceApp = function() {
                             await self.cancelAllOrders(result.s).then(ress=>{
                                 self.startTrade(true)
                             })
-                        else
-                            console.log('остались', self.newOrder)
+                        else{
+                            console.log('остались', self.newOrders)
+                            self.startTrade(true)
+                        }
+                            
                     }
+
                     if(result.S == 'BUY' && result.X == 'FILLED') // если выполнен ордер на покупку
                         self.getMyOrders().then(async res=>{
                             for(let i in self.newOrders){
@@ -456,7 +460,7 @@ const BinanceApp = function() {
 
     this.cancelOrder = function(symbol,orderId){
         self = this
-        console.log('Отменям ордер ID=',orderId,' по паре ',symbol)
+        console.log(new Date()+' Отменям ордер ID=',orderId,' по паре ',symbol)
         
         let orderParams = {
             symbol: symbol,
