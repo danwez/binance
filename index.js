@@ -228,6 +228,12 @@ const BinanceApp = function() {
                     }
                         
             }
+
+            if(self.newOrders.length == 0) {
+                renew = false
+                self.getMyBalances(true)
+            }
+
             if(renew)
                 self.cancelAllOrders(self.symbol).then((res)=>self.getMyBalances(true))
         })
