@@ -59,6 +59,8 @@ const BinanceApp = function() {
         //this.getMyBalances(true)
         this.startTrade()
         //this.accountSocket()
+        //this.timeCorrect().then(res => console.log(res))
+        //this.cancelAllOrders(this.symbol)
 
     }
 
@@ -66,13 +68,9 @@ const BinanceApp = function() {
         let self = this
         if(!this.userDataStreem.socket)
             this.accountSocket()
-        this.getMyOrders().then(res => {
-            console.log('Открытые ордера ',self.newOrders)
-            if(self.newOrders.length == 0)
-                this.getMyBalances(true)
-           // else
-                //setTimeout(()=>{self.startTrade()},5000)
-        })
+
+        this.checkOrderes()
+        
     }
 
     this.accountSocket = function(callback=function(){}){
@@ -99,26 +97,34 @@ const BinanceApp = function() {
             }
 
 
-            self.userDataStreem.socket.onmessage = function(message){
+            self.userDataStreem.socket.onmessage = async function(message){
                 let result = JSON.parse(message.data)     
                
-                console.log('wallets' , self.wallets)
-                console.log('=>',result)
+                
+                console.log('=>',new Date())
 
                 if(result.e == 'executionReport'){
-                    if(result.S == 'SELL' && result.x != 'NEW')//если это продажный ордер и он не новый, значит отменяем пве нва покупку
+                    console.log ('On '+result.s+' '+result.X+' order for '+result.S+'.')
+                    console.log('Prise = '+result.p+'. Quantity = '+result.q)
+
+                    if(result.S == 'SELL' && result.X != 'NEW')//если это продажный ордер и он не новый, значит отменяем пве нва покупку
                     {
                         console.log('Отменяем все ордера')
-                        self.cancelAllOrders(result.s).then(ress=>{
-                            self.startTrade(true)
-                        })
+                        if(self.newOrders.length > 1)
+                            await self.cancelAllOrders(result.s).then(ress=>{
+                                self.startTrade(true)
+                            })
+                        else
+                            console.log('остались', self.newOrder)
                     }
-                    if(result.S == 'BUY' && result.x == 'FILLED') // если выполнен ордер на покупку
+                    if(result.S == 'BUY' && result.X == 'FILLED') // если выполнен ордер на покупку
                         self.getMyOrders().then(async res=>{
                             for(let i in self.newOrders){
+                                console.log('Проверка продажный ли ордер ',self.newOrders[i].side,' ',new Date(self.newOrders[i].time) )
                                 if(self.newOrders[i].symbol==result.s && 
                                    self.newOrders[i].side == 'SELL' &&
-                                   Date.now() + self.timeCor - self.newOrders[i].time > 60000)
+                                   Date.now() - self.newOrders[i].time > 60000
+                                   )
                                    {
                                         await self.cancelOrder(result.s,self.newOrders[i].orderId).then(res=>{
                                             console.log("Ордер на продажу отменен")
@@ -126,10 +132,18 @@ const BinanceApp = function() {
                                         })
                                    }
                             }
-                            self.getMyBalances(true)
+                            self.trade()
                         })
                         
 
+                }
+
+                if(result.e == 'outboundAccountInfo'){
+                    //this.wallets = {}
+                    for(let i in result.B)
+                        self.wallets[result.B[i].a] = result.B[i].f
+
+                    console.log('wallets' , self.wallets)
                 }
                 
             };
@@ -179,6 +193,7 @@ const BinanceApp = function() {
                 let signature = crypto.createHmac('sha256',self.secret).update(dataQuery).digest('hex')
                 url += '&signature=' + signature
                 console.log(url)
+                console.log(method)
             }
             let reqConfig = {
                 method: method,
@@ -201,15 +216,20 @@ const BinanceApp = function() {
         self = this
         this.getMyOrders().then((res)=>{
             let renew = true
+            console.log('Открытые ордера ', self.newOrders)
             for(let i in self.newOrders){
+
                 if(self.newOrders[i].side == 'SELL')
                     renew = false
                 else
-                    if( Date.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 )
+                    if( Date.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 ){
+                        console.log('Ордер будет актуален еще '+(Date.now() - self.newOrders[i].time)/1000+' секунд')
                         renew = false
+                    }
+                        
             }
             if(renew)
-                self.cancelAllOrders(self.symbol).then((res)=>self.startTrade())
+                self.cancelAllOrders(self.symbol).then((res)=>self.getMyBalances(true))
         })
     }
 
@@ -299,7 +319,7 @@ const BinanceApp = function() {
             //console.log('res.data.serverTime',res.data)
             self.timeCor = res.data.serverTime - Date.now()
             return self.timeCor
-        })
+        }).catch(err => console.log(err))
         //callback()
     }
 
@@ -449,12 +469,11 @@ const BinanceApp = function() {
 
     this.cancelAllOrders = function(symbol){
          
-        return this.apiRequest('api/v3/openOrders',{symbol:symbol},true,true,'delete').then(res => {
-            console.log(res)
-            
+        return this.apiRequest('/api/v3/openOrders',{symbol:symbol},true,true,'delete').then(res => {
+            console.log(res.data)
+            return res.data            
         }).catch((err)=>{
-            console.log(err)
-            
+            console.log(err.toJSON())            
         })
     }
 
@@ -474,7 +493,7 @@ const BinanceApp = function() {
                 
             } 
             }).catch((err)=>{
-                console.log(err)
+                console.log(err.config)
                 setTimeout(()=>{self.startTrade()},5000)
             })
         
