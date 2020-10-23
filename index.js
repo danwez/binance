@@ -32,6 +32,7 @@ const BinanceApp = function() {
         socket: null,
         listenKey: null
     }
+    this.logOn = false
     //this.socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr")
 
     this.init= function(){
@@ -51,6 +52,7 @@ const BinanceApp = function() {
         */
 
         console.log('Стартуем')
+        this.log('Начало работы скрипта')
        // this.tick();
 
        // this.getTickerArr(); //состояние рынка за 24 ч
@@ -66,6 +68,7 @@ const BinanceApp = function() {
 
     this.startTrade = function(){
         let self = this
+        this.log('Старт торговли')
         if(!this.userDataStreem.socket)
             this.accountSocket()
 
@@ -227,7 +230,7 @@ const BinanceApp = function() {
                     renew = false
                 else
                     if( Date.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 ){
-                        console.log('Ордер будет актуален еще '+(Date.now() - self.newOrders[i].time)/1000+' секунд')
+                        console.log('Ордер будет актуален еще '+Math.round((Date.now()+self.lifeTime * 60000 - self.newOrders[i].time)/1000)+' секунд')
                         renew = false
                     }
                         
@@ -387,9 +390,9 @@ const BinanceApp = function() {
     this.buyOrder = async function(params={}){
         self = this
         console.log('wal',this.wallets[this.baseSym],'sym ',this.baseSym,' stop ',params.bidStop[0])
-        let price = Math.floor((params.bidStop[0]*1 + this.minSum * 2) * (10**self.razryad))/(10**self.razryad)
+        let price = Math.floor((params.bidStop[0]*1 + 10**-this.razryad * 2) * (10**self.razryad))/(10**self.razryad)
         console.log('size',price)
-        let quantity = Math.floor((this.wallets[this.baseSym]*0.98 ) * this.lotSize / price * 10) / 1000 
+        let quantity = Math.floor((this.wallets[this.baseSym]*0.98 ) * this.lotSize / 100 / price * (10**self.razryadQ))/(10**self.razryadQ) 
         let ordersQuant = Math.floor(100 / this.lotSize)
         
         let orderParams = {
@@ -404,7 +407,7 @@ const BinanceApp = function() {
         this.getTickerArr(async ()=>{
             let koridor = self.ticketArr.h - self.ticketArr.l
             if(self.tradeAccess && self.ticketArr && self.ticketArr.h - price > self.extrem / 100 * koridor){
-                let ordersPriceStep = params.askPrice[0] - params.bidStop[0] - self.minSum * 0.02
+                let ordersPriceStep = params.askStop[0] - params.bidStop[0] - 10**-this.razryad * 2
                 console.log('ordersPriceStep',ordersPriceStep)
                 for(let i = 0; i < ordersQuant; i++){
                     
@@ -437,8 +440,8 @@ const BinanceApp = function() {
     this.sellOrder = function(params={}){
         self = this
         console.log('wal',this.wallets[this.tradeSym],'sym ',this.tradeSym,' stop ',params.askStop[0])
-        let price = Math.floor((params.askStop[0]*1 - this.minSum * 2) * 1000) / 1000
-        let quantity = Math.floor(this.wallets[this.tradeSym] * 1000) / 1000
+        let price = Math.floor((params.askStop[0]*1 - 10**-this.razryad * 2) * 1000) / 1000
+        let quantity = Math.floor(this.wallets[this.tradeSym] * (10**self.razryadQ))/(10**self.razryadQ)
         let orderParams = {
             symbol: this.symbol,
             side: 'SELL',
@@ -527,10 +530,7 @@ const BinanceApp = function() {
             self.newOrders=[]
             for(let i in res.data){
                 if(res.data[i].status == 'NEW'){
-                    if(res.data[i].side == 'BUY' && Date.now() + self.timeCor - res.data[i].time > self.lifeTime * 60000)
-                        self.cancelOrder(res.data[i].symbol,res.data[i].orderId)
-                    else
-                        self.newOrders.push(res.data[i])
+                    self.newOrders.push(res.data[i])
                 }
                 
             }
@@ -541,6 +541,14 @@ const BinanceApp = function() {
             setTimeout(()=>{self.startTrade()},5000)
         })
 
+    }
+
+    this.log=function(message){
+        if(this.logOn){
+            let now = new Date()
+            let date = now.getHours()+':'+now.getMinutes()+':'+now.getSeconds()
+            fs.writeFile('log.txt', '\n\r'+date+' '+ message, { flag: 'a' }, (err) => {console.log(err)})
+        }
     }
 
  
