@@ -404,15 +404,18 @@ const BinanceApp = function() {
             timeInForce: 'GTC'
         }
         let endpoint = '/api/v3/order'
+        
         this.getTickerArr(async ()=>{
             let koridor = self.ticketArr.h - self.ticketArr.l
+            
             if(self.tradeAccess && self.ticketArr && self.ticketArr.h - price > self.extrem / 100 * koridor){
                 let ordersPriceStep = params.askStop[0] - params.bidStop[0] - 10**-this.razryad * 2
                 console.log('ordersPriceStep',ordersPriceStep)
+                let error = false
                 for(let i = 0; i < ordersQuant; i++){
                     
                     let orderPrice = Math.floor((price - ordersPriceStep * i)*(10**self.razryad))/(10**self.razryad)
-                    console.log('params',params, 'err',ordersPriceStep,'orderPrice',orderPrice)
+                    console.log('params',params, 'ordersPriceStep',ordersPriceStep,'orderPrice',orderPrice)
                     orderParams.price = orderPrice
                     console.log('orderParams',orderParams)
                     
@@ -420,11 +423,13 @@ const BinanceApp = function() {
                         console.log(res.data)
                         //self.startTrade()
                     }).catch((err)=>{
-                        console.log(err)
-                        setTimeout(()=>{self.startTrade()},5000)
+                        console.log('Ошибка при попытке купить')
+                        error = true
+                        //setTimeout(()=>{self.startTrade()},5000)
                     })
                     
                 }
+                if (error) setTimeout(()=>{self.startTrade()},5000)
             }
             else
                 setTimeout(() => {
