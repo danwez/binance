@@ -363,7 +363,8 @@ const BinanceApp = function() {
             console.log('ask',self.orderbook.asks[self.maxOrderValumeAsk])
             console.log('bid',self.orderbook.bids[self.maxOrderValumeBid])
             console.log('sum value ask',asksum, ' bid', bidsum)
-            console.log('komis',self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',self.orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001+self.orderbook.bids[self.maxOrderValumeBid][0]*0.001)
+            let komis = self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001+self.orderbook.bids[self.maxOrderValumeBid][0]*0.001
+            console.log('komis',self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',self.orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',komis)
             //trade = false
             if(trade){
                 if(asksum/bidsum>0.5) {
@@ -373,6 +374,7 @@ const BinanceApp = function() {
                             askStop: self.orderbook.asks[self.maxOrderValumeAsk],
                             bidStop: self.orderbook.bids[self.maxOrderValumeBid],
                             askPrice: self.orderbook.asks[0],
+                            komis: komis,
                         })
                     else
                         self.sellOrder({
@@ -408,7 +410,11 @@ const BinanceApp = function() {
         this.getTickerArr(async ()=>{
             let koridor = self.ticketArr.h - self.ticketArr.l
             
-            if(self.tradeAccess && self.ticketArr && self.ticketArr.h - price > self.extrem / 100 * koridor){
+            if(self.tradeAccess && 
+                    self.ticketArr && 
+                    self.ticketArr.h - price > self.extrem / 100 * koridor 
+                    //&& params.askStop[0] - params.bidStop[0] < params.komis * 1.3
+               ){
                 let ordersPriceStep = params.askStop[0] - params.bidStop[0] - 10**-this.razryad * 2
                 console.log('ordersPriceStep',ordersPriceStep)
                 let error = false
@@ -435,7 +441,7 @@ const BinanceApp = function() {
                 setTimeout(() => {
                     if(self.ticketArr)
                         console.log('Торговля остановлена. До потолка ',self.ticketArr.h - price, ' минимум ',self.extrem / 100 * koridor)
-
+                        console.log('При покупке 1 '+self.tradeSym +' Комиссия = '+params.komis+'. Максимальная прибыль = '+(params.askStop[0] - params.bidStop[0]))
                     self.startTrade()
                 }, 5000)
         })
