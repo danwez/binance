@@ -165,7 +165,7 @@ const BinanceApp = function() {
                                         })
                                    }
                             }
-                            self.trade()
+                            self.trade(true)
                         })
                         
 
@@ -589,7 +589,7 @@ const BinanceApp = function() {
         
     }
 
-    this.trade = function() {
+    this.trade = function(addBuy = false) {
         this.dealRenew()
         if(this.wallets[this.tradeSym] == undefined || 
             this.wallets[this.tradeSym]<this.minSum 
@@ -599,7 +599,7 @@ const BinanceApp = function() {
             this.GetOrderList(this.symbol,true,'BUY') // стакан ордеров
         }else{
             this.GetOrderList(this.symbol,true,'SELL')
-            if(this.deal.stepSum > 0 && this.wallets[this.baseSym] >= this.deal.stepSum )
+            if(this.deal.stepSum > 0 && this.wallets[this.baseSym] >= this.deal.stepSum && addBuy )
                 this.GetOrderList(this.symbol,true,'BUY')
         }
     }

@@ -107,7 +107,7 @@ Deal.prototype.checkStatus = function(){
     }
     this.status = status
 
-    if(this.status == closed) this.calcProfit()
+    if(this.status == 'closed') this.calcProfit()
 
     this.save()
 }
