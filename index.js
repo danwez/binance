@@ -1,13 +1,13 @@
 
-const Binance = require('@evanshortiss/binance.js')
 const axios = require('axios');
 const fs = require('fs')
 const WebSocket = require('ws')
 const qs = require('qs')
 const crypto = require('crypto')
-const mysql = require('mysql')
 const config = require('./config');
 const symbols = require('./symbols');
+const Deal = require('./deal');
+
 
   //getAllAccountOrders
   
@@ -15,24 +15,25 @@ const symbols = require('./symbols');
 const BinanceApp = function() {
 
     this.exSymbols = []
-    this.orderbook= false
     this.maxOrderValumeAsk= 0
     this.maxOrderValumeBid= 0
     this.timeCor = 0
-    this.newOrders = [];
-    this.db = null;
+    this.deal = null;
     this.lastSymbols = [];
     this.lotSizes = null;
     this.wallets = {};
     this.needBuy = false;    
     this.ticketArr = null;
     this.tradeAccess = true;
-    this.myHistory = [];
+    this.depthLimits = [5, 10, 20, 50, 100, 500, 1000, 5000]
+
     this.userDataStreem = {
         socket: null,
         listenKey: null
     }
     this.logOn = false
+    this.basePrice = 0
+    this.deal = null
     //this.socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr")
 
     this.init= function(){
@@ -42,23 +43,17 @@ const BinanceApp = function() {
         for(let i in config)
             this[i] = config[i]
 
-        // подключение базы данных 
-        /*
-        fs.readFile('db_config.json', 'utf8', function (err, data) {
-            if (err) throw err;
-               let obj = JSON.parse(data);
-               //console.log(obj)
-        });
-        */
-
         console.log('Стартуем')
         this.log('Начало работы скрипта')
+        
        // this.tick();
-
+       
        // this.getTickerArr(); //состояние рынка за 24 ч
        //this.getChangeInfo() // получаем инфу по паре
-        
+        //this.GetOrderList(this.symbol)
         //this.getMyBalances(true)
+        //this.getMyOrders().then(res=>{console.log(self.deal)} )
+        
         this.startTrade()
         //this.accountSocket()
         //this.timeCorrect().then(res => console.log(res))
@@ -69,12 +64,22 @@ const BinanceApp = function() {
     this.startTrade = function(){
         let self = this
         this.log('Старт торговли')
+        this.dealRenew()
         if(!this.userDataStreem.socket)
             this.accountSocket()
 
         this.checkOrderes()
         
     }
+
+    this.dealRenew = function(){
+        if(this.deal == null) {
+            this.deal = new Deal(this.symbol)
+            this.deal.getActive()
+        }
+    }
+
+
 
     this.accountSocket = function(callback=function(){}){
         let self =this
@@ -87,8 +92,7 @@ const BinanceApp = function() {
             }
         }).then(res => {
         //this.apiRequest('/api/v3/userDataStream',{},false,falsejh,'post').then(res => {
-            self.userDataStreem.listenKey = res.data.listenKey
-            console.log(res.data)       
+            self.userDataStreem.listenKey = res.data.listenKey    
         
             self.userDataStreem.socket = new WebSocket("wss://stream.binance.com:9443/ws/"+self.userDataStreem.listenKey);
             let result = 0
@@ -101,39 +105,61 @@ const BinanceApp = function() {
 
 
             self.userDataStreem.socket.onmessage = async function(message){
+                
                 let result = JSON.parse(message.data)     
                
                 
                 console.log('=>',new Date())
 
                 if(result.e == 'executionReport'){
+                    // срабатывает при изменении статуса ордера
                     console.log ('On '+result.s+' '+result.X+' order for '+result.S+'.')
                     console.log('Prise = '+result.p+'. Quantity = '+result.q)
 
-                    if(result.S == 'SELL' && result.X != 'NEW')//если это продажный ордер и он не новый, значит отменяем пве нва покупку
+                    if(result.X == 'NEW'){
+                        //новый ордер добавляем в сделку
+                        
+                        self.deal.orders.push(self.normalSocketOrder(result))
+                        if(result.S == 'SELL')
+                            self.deal.calcProfit()
+                        console.log('new deal',self.deal)
+                        self.deal.save()
+                    }else {                  
+                        // изменен статус ордера
+                        self.deal.changeOrder(result.i,{status:result.X})
+                        console.log('changeOrder = ',self.deal)
+                    }
+
+                    console.log('after buy', self.deal, 'time', Date.now())
+
+                    if(result.S == 'SELL' && result.X == 'FILLED')//если исполнен продажный ордер, значит отменяем ордера на покупку
                     {
-                        console.log('Отменяем все ордера')
-                        if(self.newOrders.length > 1)
+                        self.deal.close()                           
+
                             await self.cancelAllOrders(result.s).then(ress=>{
+                                self.deal = null
                                 self.startTrade(true)
                             })
-                        else{
-                            console.log('остались', self.newOrders)
-                            self.startTrade(true)
-                        }
                             
                     }
 
                     if(result.S == 'BUY' && result.X == 'FILLED') // если выполнен ордер на покупку
+
+
+
+                    //this.GetOrderList(this.symbol,true,'BUY')
+
                         self.getMyOrders().then(async res=>{
-                            for(let i in self.newOrders){
-                                console.log('Проверка продажный ли ордер ',self.newOrders[i].side,' ',new Date(self.newOrders[i].time) )
-                                if(self.newOrders[i].symbol==result.s && 
-                                   self.newOrders[i].side == 'SELL' &&
-                                   Date.now() - self.newOrders[i].time > 60000
+                            for(let i in self.deal.orders){
+                                console.log('Проверка есть ли продажный ли ордер ',self.deal.orders[i].side,' ',new Date(self.deal.orders[i].time) )
+                                if(self.deal.orders[i].symbol==result.s && 
+                                   self.deal.orders[i].side == 'SELL' &&
+                                   Date.now() - self.deal.orders[i].time > 60000
                                    )
                                    {
-                                        await self.cancelOrder(result.s,self.newOrders[i].orderId).then(res=>{
+                                       // отменяем ордер на продажу, чтобы выставить новый
+                                        await self.cancelOrder(result.s,self.deal.orders[i].orderId).then(res=>{
+                                            
                                             console.log("Ордер на продажу отменен")
                                             
                                         })
@@ -219,36 +245,41 @@ const BinanceApp = function() {
 
     }
 
-    this.checkOrderes = () => {
+    this.checkOrderes = function() {
         self = this
         this.getMyOrders().then((res)=>{
             let renew = true
-            console.log('Открытые ордера ', self.newOrders)
-            for(let i in self.newOrders){
+            console.log('Открытые ордера ', self.deal.orders)
 
-                if(self.newOrders[i].side == 'SELL')
-                    renew = false
-                else
-                    if( Date.now() - self.newOrders[i].time < self.lifeTime * 60000 + 60000 ){
-                        console.log('Ордер будет актуален еще '+Math.round((Date.now()+self.lifeTime * 60000 - self.newOrders[i].time)/1000)+' секунд')
+            for(let i in self.deal.orders){
+                if(self.deal.orders[i].status == 'NEW')
+                    if(self.deal.orders[i].side == 'SELL')
                         renew = false
-                    }
+                    else
+                        if( self.deal.orders[i].side == 'BUY' && Date.now() - self.deal.orders[i].time < self.lifeTime * 60000 + 60000 ){
+                            console.log('Ордер будет актуален еще '+Math.round((Date.now()+self.lifeTime * 60000 - self.deal.orders[i].time)/1000)+' секунд')
+                            renew = false
+                        }
                         
             }
 
-            if(self.newOrders.length == 0) {
+            if(self.deal.orders.length == 0) {
                 renew = false
                 self.getMyBalances(true)
             }
 
             if(renew)
-                self.cancelAllOrders(self.symbol).then((res)=>self.getMyBalances(true))
+                self.cancelAllOrders(self.symbol).then((res)=>{
+                    self.deal.cancel()
+                    self.deal = null
+                    self.getMyBalances(true)
+                })
         })
     }
 
     this.getChangeInfo = async function(){
         let self = this
-        axios.get(this.url+'/api/v3/exchangeInfo').then((res) => {
+        return axios.get(this.url+'/api/v3/exchangeInfo').then((res) => {
             for(let i in res.data.symbols){
                 if(res.data.symbols[i].symbol == self.symbol)
                     console.log(res.data.symbols[i])
@@ -337,65 +368,92 @@ const BinanceApp = function() {
     }
 
     this.GetOrderList = async function(symbol,trade=false,typeTrade='BUY'){
+
+        //определяемся с ценами по стакану ордеров
         let self = this
 
-        axios.get(this.url+'/api/v3/depth?symbol='+symbol)
+        // определяем глубину стакана
+        let limit = 0
+        for (let i in this.depthLimits){
+            limit = this.depthLimits[i]
+            if(limit >= self.depth)
+                break
+        }
+
+        axios.get(this.url+'/api/v3/depth?symbol='+symbol+'&limit='+limit)
         .then(function (response) {
-            // handle success
-            //console.log(response.data);
-            self.orderbook = response.data;
+            
+            let orderbook = response.data;
             let asksum =0;
             let bidsum = 0;
-            for(var i in self.orderbook.asks){
-                self.orderbook.asks[i].push(i)
-                self.orderbook.bids[i].push(i)
-                self.maxOrderValumeAsk = self.orderbook.asks[self.maxOrderValumeAsk][1]*1 > self.orderbook.asks[i][1]*1 ? self.maxOrderValumeAsk : i;
+            for(var i in orderbook.asks){
+                if(i <= self.depth){
+                    asksum +=  orderbook.asks[i][1]*1;
+                    bidsum += orderbook.bids[i][1]*1
+                    
+                    if(i>0 && 1==2) { 
+                        
+                        if(orderbook.asks[i][1] > asksum/i*7) console.log('barier a ',i,' = ', orderbook.asks[i])
+                        if(orderbook.bids[i][1] > bidsum/i*7) console.log('barier b ',i,' = ', orderbook.bids[i])
+                    }
+                    orderbook.asks[i].push(i)
+                    orderbook.bids[i].push(i)
+                    self.maxOrderValumeAsk = orderbook.asks[self.maxOrderValumeAsk][1]*1 > orderbook.asks[i][1]*1 ? self.maxOrderValumeAsk : i;
 
-                self.maxOrderValumeBid = self.orderbook.bids[self.maxOrderValumeBid][1]*1 > self.orderbook.bids[i][1]*1 ? self.maxOrderValumeBid : i;
-
-                //console.log(self.orderbook.asks[self.maxOrderValumeAsk][1], self.orderbook.asks[i][1]);
-                asksum +=  self.orderbook.asks[i][1]*1;
-                bidsum += self.orderbook.bids[i][1]*1
+                    self.maxOrderValumeBid = orderbook.bids[self.maxOrderValumeBid][1]*1 > orderbook.bids[i][1]*1 ? self.maxOrderValumeBid : i;
+                    
+                }else break
 
             }
-            console.log('ask0',self.orderbook.asks[0])
-            console.log('bid0',self.orderbook.bids[0])
-            console.log('ask',self.orderbook.asks[self.maxOrderValumeAsk])
-            console.log('bid',self.orderbook.bids[self.maxOrderValumeBid])
+            console.log('ask0',orderbook.asks[0])
+            console.log('bid0',orderbook.bids[0])
+            console.log('ask',orderbook.asks[self.maxOrderValumeAsk])
+            console.log('bid',orderbook.bids[self.maxOrderValumeBid])
             console.log('sum value ask',asksum, ' bid', bidsum)
-            let komis = self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001+self.orderbook.bids[self.maxOrderValumeBid][0]*0.001
-            console.log('komis',self.orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',self.orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',komis)
+            let komis = orderbook.asks[self.maxOrderValumeAsk][0]*0.001+orderbook.bids[self.maxOrderValumeBid][0]*0.001
+            console.log('komis',orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',komis)
             //trade = false
             if(trade){
                 if(asksum/bidsum>0.5) {
                     console.log('Lets Trade')
                     if(typeTrade=='BUY')
                         self.buyOrder({
-                            askStop: self.orderbook.asks[self.maxOrderValumeAsk],
-                            bidStop: self.orderbook.bids[self.maxOrderValumeBid],
-                            askPrice: self.orderbook.asks[0],
+                            askStop: orderbook.asks[self.maxOrderValumeAsk],
+                            bidStop: orderbook.bids[self.maxOrderValumeBid],
+                            askPrice: orderbook.asks[0],
                             komis: komis,
                         })
                     else
                         self.sellOrder({
-                            askStop: self.orderbook.asks[self.maxOrderValumeAsk],
-                            bidStop: self.orderbook.bids[self.maxOrderValumeBid],
-                            askPrice: self.orderbook.asks[0],
+                            askStop: orderbook.asks[self.maxOrderValumeAsk],
+                            bidStop: orderbook.bids[self.maxOrderValumeBid],
+                            askPrice: orderbook.asks[0],
                         })
                 }else{
                     setTimeout(function(){self.getMyBalances(true)},5000)
                 }
             }
-        })
+            orderbook = null
+        }).catch(err => console.log(err))
     }
+
+
 
     this.buyOrder = async function(params={}){
         self = this
         console.log('wal',this.wallets[this.baseSym],'sym ',this.baseSym,' stop ',params.bidStop[0])
+
+        if(this.deal.sum ==  0){
+            
+            self.deal.sum = this.wallets[this.baseSym]*0.98
+            self.deal.stepSum = this.deal.sum * this.lotSize / 100
+            self.deal.save()
+            
+        }
+
         let price = Math.floor((params.bidStop[0]*1 + 10**-this.razryad * 2) * (10**self.razryad))/(10**self.razryad)
-        console.log('size',price)
-        let quantity = Math.floor((this.wallets[this.baseSym]*0.98 ) * this.lotSize / 100 / price * (10**self.razryadQ))/(10**self.razryadQ) 
-        let ordersQuant = Math.floor(100 / this.lotSize)
+        console.log('price ',price)
+        let quantity = Math.floor(this.deal.stepSum / price * (10**self.razryadQ))/(10**self.razryadQ) 
         
         let orderParams = {
             symbol: this.symbol,
@@ -405,9 +463,12 @@ const BinanceApp = function() {
             quantity: quantity,
             timeInForce: 'GTC'
         }
+
         let endpoint = '/api/v3/order'
         
         this.getTickerArr(async ()=>{
+
+            // определяем коридор движения цены за последние 24 часа
             let koridor = self.ticketArr.h - self.ticketArr.l
             
             if(self.tradeAccess && 
@@ -415,26 +476,25 @@ const BinanceApp = function() {
                     self.ticketArr.h - price > self.extrem / 100 * koridor 
                     //&& params.askStop[0] - params.bidStop[0] < params.komis * 1.3
                ){
-                let ordersPriceStep = params.askStop[0] - params.bidStop[0] - 10**-this.razryad * 2
-                console.log('ordersPriceStep',ordersPriceStep)
+
                 let error = false
-                for(let i = 0; i < ordersQuant; i++){
+                
                     
-                    let orderPrice = Math.floor((price - ordersPriceStep * i)*(10**self.razryad))/(10**self.razryad)
-                    console.log('params',params, 'ordersPriceStep',ordersPriceStep,'orderPrice',orderPrice)
+                    let orderPrice = Math.floor(price * (10**self.razryad))/(10**self.razryad)
                     orderParams.price = orderPrice
-                    console.log('orderParams',orderParams)
+                    console.log('orderParams ',orderParams)
                     
                     await self.apiRequest(endpoint,orderParams,true,true, 'POST').then(res => {
-                        console.log(res.data)
+                        console.log('BUY ORDER',res.data)
+                        
                         //self.startTrade()
                     }).catch((err)=>{
                         console.log('Ошибка при попытке купить')
                         error = true
-                        //setTimeout(()=>{self.startTrade()},5000)
+                        
                     })
                     
-                }
+                
                 if (error) setTimeout(()=>{self.startTrade()},5000)
             }
             else
@@ -464,7 +524,8 @@ const BinanceApp = function() {
         let endpoint = '/api/v3/order'
         this.apiRequest(endpoint,orderParams,true,true,'POST').then(res => {
             console.log(res.data)
-            self.startTrade()
+
+            //self.startTrade()
         }).catch((err)=>{
             console.log(err)
             setTimeout(()=>{self.startTrade()},5000)
@@ -482,6 +543,7 @@ const BinanceApp = function() {
         }
         let endpoint = '/api/v3/order'
         this.apiRequest(endpoint,orderParams,true,true,'delete').then(res => {
+            self.deal.changeOrder(orderId,{status:'CANCELED'})
             console.log(res)
             
         }).catch((err)=>{
@@ -492,6 +554,7 @@ const BinanceApp = function() {
     }
 
     this.cancelAllOrders = function(symbol){
+         
          
         return this.apiRequest('/api/v3/openOrders',{symbol:symbol},true,true,'delete').then(res => {
             console.log(res.data)
@@ -512,6 +575,9 @@ const BinanceApp = function() {
                     if(res.data[i].free > 0)   
                         self.wallets[res.data[i].coin] = res.data[i].free
                          console.log('wallets',self.wallets)
+
+            
+
             if(trade){
                 this.trade()
                 
@@ -523,11 +589,18 @@ const BinanceApp = function() {
         
     }
 
-    this.trade = () => {
-        if(this.wallets[this.tradeSym] == undefined || this.wallets[this.tradeSym]<this.minSum){ // попытка купить валюту
+    this.trade = function() {
+        this.dealRenew()
+        if(this.wallets[this.tradeSym] == undefined || 
+            this.wallets[this.tradeSym]<this.minSum 
+            
+            ){ 
+            // попытка купить валюту
             this.GetOrderList(this.symbol,true,'BUY') // стакан ордеров
         }else{
             this.GetOrderList(this.symbol,true,'SELL')
+            if(this.deal.stepSum > 0 && this.wallets[this.baseSym] >= this.deal.stepSum )
+                this.GetOrderList(this.symbol,true,'BUY')
         }
     }
 
@@ -535,23 +608,56 @@ const BinanceApp = function() {
     this.getMyOrders = function(){
         let self =this
         let endPoint = '/api/v3/allOrders'
-        return this.apiRequest(endPoint, {symbol:this.symbol}, true, true)
+        
+        this.dealRenew()
+        return this.apiRequest(endPoint, {symbol:this.symbol, limit:20}, true, true)
         .then((res)=>{
-            self.myHistory = res.data
-            self.newOrders=[]
-            for(let i in res.data){
-                if(res.data[i].status == 'NEW'){
-                    self.newOrders.push(res.data[i])
+            if(self.deal.orders.length == 0){
+                for(let i in res.data){
+                    if(res.data[i].status == 'NEW'){
+                        self.deal.orders.push(res.data[i])
+                        
+                    }
+                    
                 }
+                self.deal.save()
                 
+            }else{
+                
+                for(let i in res.data){
+                    for(let j in self.deal.orders)
+                        if(self.deal.orders[j].orderId == res.data[i].orderId && self.deal.orders[j].status != res.data[i].status){
+                            self.deal.changeOrder(self.deal.orders[j].orderId, {status: res.data[i].status})
+                            console.log('change deal ',self.deal)
+                        }
+                }
             }
-            
-            return self.newOrders
+            return self.deal.orders
         }).catch((err)=>{
             console.log(err)
             setTimeout(()=>{self.startTrade()},5000)
         })
 
+    }
+
+    this.normalSocketOrder = function(result){
+        let normal = {
+            symbol: result.s,
+            orderId: result.i,
+            orderListId: result.g, //Unless OCO, value will be -1
+            clientOrderId: result.c,
+            transactTime: result.T,
+            price: result.p,
+            origQty: result.q,
+            executedQty: result.q,
+            cummulativeQuoteQty: result.q,
+            status: result.X,
+            timeInForce: result.f,
+            type: "MARKET",
+            side: result.S
+        }
+
+        return normal
     }
 
     this.log=function(message){
@@ -565,5 +671,5 @@ const BinanceApp = function() {
  
 }
 
-const app = new BinanceApp
+const app = new BinanceApp()
 app.init()
