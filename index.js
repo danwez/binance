@@ -57,7 +57,7 @@ const BinanceApp = function() {
         this.startTrade()
         //this.accountSocket()
         //this.timeCorrect().then(res => console.log(res))
-        //this.cancelAllOrders(this.symbol)
+
 
     }
 
@@ -122,7 +122,7 @@ const BinanceApp = function() {
                         self.deal.orders.push(self.normalSocketOrder(result))
                         if(result.S == 'SELL')
                             self.deal.calcProfit()
-                        console.log('new deal',self.deal)
+                        //console.log('new deal',self.deal)
                         self.deal.save()
                     }else {                  
                         // изменен статус ордера
@@ -151,12 +151,14 @@ const BinanceApp = function() {
 
                         self.getMyOrders().then(async res=>{
                             for(let i in self.deal.orders){
-                                console.log('Проверка есть ли продажный ли ордер ',self.deal.orders[i].side,' ',new Date(self.deal.orders[i].time) )
+                                
                                 if(self.deal.orders[i].symbol==result.s && 
                                    self.deal.orders[i].side == 'SELL' &&
-                                   Date.now() - self.deal.orders[i].time > 60000
+                                   self.deal.orders[i].status == 'NEW' &&
+                                   Date.now() - self.deal.orders[i].transactTime > 60000
                                    )
                                    {
+                                    console.log('Проверка есть ли продажный ли ордер ',self.deal.orders[i].side,' ',new Date(self.deal.orders[i].transactTime) )
                                        // отменяем ордер на продажу, чтобы выставить новый
                                         await self.cancelOrder(result.s,self.deal.orders[i].orderId).then(res=>{
                                             
@@ -249,29 +251,31 @@ const BinanceApp = function() {
         self = this
         this.getMyOrders().then((res)=>{
             let renew = true
-            console.log('Открытые ордера ', self.deal.orders)
+            console.log('Открытые ордера ', self.deal.getOpenOrders())
 
             for(let i in self.deal.orders){
                 if(self.deal.orders[i].status == 'NEW')
                     if(self.deal.orders[i].side == 'SELL')
                         renew = false
                     else
-                        if( self.deal.orders[i].side == 'BUY' && Date.now() - self.deal.orders[i].time < self.lifeTime * 60000 + 60000 ){
-                            console.log('Ордер будет актуален еще '+Math.round((Date.now()+self.lifeTime * 60000 - self.deal.orders[i].time)/1000)+' секунд')
+                        if( self.deal.orders[i].side == 'BUY' && Date.now() - self.deal.orders[i].transactTime < self.lifeTime * 60000 + 60000 ){
+                            console.log('Ордер будет актуален еще '+Math.round((Date.now()+self.lifeTime * 60000 - self.deal.orders[i].transactTime)/1000)+' секунд')
                             renew = false
                         }
                         
             }
 
-            if(self.deal.orders.length == 0) {
+            if(self.deal.getOpenOrders().length == 0) {
                 renew = false
                 self.getMyBalances(true)
             }
 
             if(renew)
                 self.cancelAllOrders(self.symbol).then((res)=>{
-                    self.deal.cancel()
-                    self.deal = null
+                    if(self.deal){
+                        self.deal.cancel()
+                        self.deal = null
+                    }
                     self.getMyBalances(true)
                 })
         })
