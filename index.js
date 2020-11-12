@@ -418,10 +418,9 @@ const BinanceApp = function() {
             console.log('komis',orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',komis)
             let profit = orderbook.asks[self.maxOrderValumeAsk][0] - orderbook.bids[self.maxOrderValumeBid][0]
             console.log('profit = ',profit)
-            trade = profit >= komis*2
             //trade = false
             if(trade){
-                if(asksum/bidsum>0.5) {
+                if(asksum/bidsum>0.5 && profit >= komis*2) {
                     console.log('Lets Trade')
                     if(typeTrade=='BUY')
                         self.buyOrder({
