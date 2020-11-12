@@ -112,6 +112,14 @@ Deal.prototype.checkStatus = function(){
     this.save()
 }
 
+Deal.prototype.getOpenOrders = function(){
+    let orders = []
+    for(let i in this.orders)
+        if(this.orders[i].status == 'NEW')
+            orders.push(this.orders[i])
+    return orders
+}
+
 
 
 module.exports = Deal
