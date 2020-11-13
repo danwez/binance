@@ -30,7 +30,7 @@ const BinanceApp = function() {
     this.logOn = false
     this.basePrice = 0
     this.deal = null
-    //this.socket = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr")
+    
 
     this.init= function(){
         let self = this
