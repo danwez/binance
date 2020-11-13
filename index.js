@@ -6,11 +6,7 @@ const qs = require('qs')
 const crypto = require('crypto')
 const config = require('./config');
 const symbols = require('./symbols');
-const Deal = require('./deal');
-
-
-  //getAllAccountOrders
-  
+const Deal = require('./deal');  
 
 const BinanceApp = function() {
 
