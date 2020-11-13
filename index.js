@@ -163,11 +163,11 @@ const BinanceApp = function() {
                                         await self.cancelOrder(result.s,self.deal.orders[i].orderId).then(res=>{
                                             
                                             console.log("Ордер на продажу отменен")
-                                            
+                                            self.trade(true)
                                         })
                                    }
                             }
-                            self.trade(true)
+                            
                         })
                         
 
@@ -436,11 +436,14 @@ const BinanceApp = function() {
                             askPrice: orderbook.asks[0],
                         })
                 }else{
-                    setTimeout(function(){self.getMyBalances(true)},5000)
+                    setTimeout(function(){self.GetOrderList(symbol,trade,typeTrade)},self.stepTime*1000)
                 }
             }
             orderbook = null
-        }).catch(err => console.log(err))
+        }).catch(err => {
+            console.log(err)
+            setTimeout(function(){self.GetOrderList(symbol,trade,typeTrade)},self.stepTime*1000)
+        })
     }
 
 
@@ -501,7 +504,7 @@ const BinanceApp = function() {
                     })
                     
                 
-                if (error) setTimeout(()=>{self.startTrade()},5000)
+                if (error) setTimeout(()=>{self.startTrade()},self.stepTime*1000)
             }
             else
                 setTimeout(() => {
@@ -509,7 +512,7 @@ const BinanceApp = function() {
                         console.log('Торговля остановлена. До потолка ',self.ticketArr.h - price, ' минимум ',self.extrem / 100 * koridor)
                         console.log('При покупке 1 '+self.tradeSym +' Комиссия = '+params.komis+'. Максимальная прибыль = '+(params.askStop[0] - params.bidStop[0]))
                     self.startTrade()
-                }, 5000)
+                }, self.stepTime*1000)
         })
         //console.log(orderParams)
     }
@@ -534,7 +537,7 @@ const BinanceApp = function() {
             //self.startTrade()
         }).catch((err)=>{
             console.log(err)
-            setTimeout(()=>{self.startTrade()},5000)
+            setTimeout(()=>{self.startTrade()},self.stepTime*1000)
         })
         //console.log(orderParams)
     }
@@ -590,7 +593,7 @@ const BinanceApp = function() {
             } 
             }).catch((err)=>{
                 console.log(err.config)
-                setTimeout(()=>{self.startTrade()},5000)
+                setTimeout(()=>{self.startTrade()},self.stepTime*1000)
             })
         
     }
@@ -641,7 +644,7 @@ const BinanceApp = function() {
             return self.deal.orders
         }).catch((err)=>{
             console.log(err)
-            setTimeout(()=>{self.startTrade()},5000)
+            setTimeout(()=>{self.startTrade()},self.stepTime*1000)
         })
 
     }
