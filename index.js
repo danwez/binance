@@ -87,7 +87,7 @@ const BinanceApp = function() {
                 'X-MBX-APIKEY': self.apikey
             }
         }).then(res => {
-        //this.apiRequest('/api/v3/userDataStream',{},false,falsejh,'post').then(res => {
+        
             self.userDataStreem.listenKey = res.data.listenKey    
         
             self.userDataStreem.socket = new WebSocket("wss://stream.binance.com:9443/ws/"+self.userDataStreem.listenKey);
@@ -519,7 +519,7 @@ const BinanceApp = function() {
         let price = Math.floor((params.askStop[0]*1 - 10**-this.razryad * 2) * 1000) / 1000
         let quantity = Math.floor(this.wallets[this.tradeSym] * (10**self.razryadQ))/(10**self.razryadQ)
         // если продаем BNB, то оставляем 0,08% на комиссию
-        if(this.tradeSym == 'BNB') quantity = Math.floor(quantity * 0.0008 (10**self.razryadQ))/(10**self.razryadQ)
+        if(this.tradeSym == 'BNB') quantity = Math.floor(quantity * 0.9993 * (10**self.razryadQ))/(10**self.razryadQ)
         let orderParams = {
             symbol: this.symbol,
             side: 'SELL',
