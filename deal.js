@@ -112,6 +112,14 @@ Deal.prototype.checkStatus = function(){
     this.save()
 }
 
+Deal.prototype.getOrderById = function(id){
+    for(let i in this.orders){
+        if(this.orders[i].orderId == id)
+            return this.orders[i]
+    }
+    return false
+}
+
 Deal.prototype.getOpenOrders = function(){
     let orders = []
     for(let i in this.orders)
