@@ -159,11 +159,11 @@ const BinanceApp = function() {
                                         await self.cancelOrder(result.s,self.deal.orders[i].orderId).then(res=>{
                                             
                                             console.log("Ордер на продажу отменен")
-                                            self.trade(true)
+                                            
                                         })
                                    }
                             }
-                            
+                            self.trade(true)
                         })
                         
 
@@ -247,7 +247,15 @@ const BinanceApp = function() {
         self = this
         this.getMyOrders().then((res)=>{
             let renew = true
-            console.log('Открытые ордера ', self.deal.getOpenOrders())
+            console.log('Открытые ордера в сделке', self.deal.getOpenOrders())
+
+            for(let i in res){
+                let order = self.deal.getOrderById(res[i].orderId)
+                order.status = res[i].status                
+            }
+            self.deal.checkStatus()
+
+            if(self.deal.status != 'opened') renew == true
 
             for(let i in self.deal.orders){
                 if(self.deal.orders[i].status == 'NEW')
@@ -266,15 +274,19 @@ const BinanceApp = function() {
                 self.getMyBalances(true)
             }
 
-            if(renew)
-                self.cancelAllOrders(self.symbol).then((res)=>{
-                    if(self.deal){
-                        self.deal.cancel()
-                        self.deal = null
-                    }
-                    self.getMyBalances(true)
-                })
+            if(renew)   DealRenew()
+                
         })
+
+        function DealRenew(){
+            self.cancelAllOrders(self.symbol).then((res)=>{
+                if(self.deal){
+                    self.deal.cancel()
+                    self.deal = null
+                }
+                self.getMyBalances(true)
+            })
+        }
     }
 
     this.getChangeInfo = async function(){
@@ -448,13 +460,14 @@ const BinanceApp = function() {
         self = this
         console.log('wal',this.wallets[this.baseSym],'sym ',this.baseSym,' stop ',params.bidStop[0])
 
-        if(this.deal.sum ==  0){
+        if(this.deal.sum  < this.wallets[this.baseSym]*0.98){
             
             self.deal.sum = this.wallets[this.baseSym]*0.98
             self.deal.stepSum = this.deal.sum * this.lotSize / 100
             self.deal.save()
             
         }
+        console.log('deal',self.deal)
         if(this.deal.stepSum > this.wallets[this.baseSym]) this.deal.stepSum = this.wallets[this.baseSym]
         
 
@@ -496,7 +509,9 @@ const BinanceApp = function() {
                         
                         //self.startTrade()
                     }).catch((err)=>{
+                        
                         console.log('Ошибка при попытке купить')
+                        console.log(err.response.data)
                         error = true
                         
                     })
@@ -613,8 +628,12 @@ const BinanceApp = function() {
                 self.GetOrderList(self.symbol,true,'BUY') // стакан ордеров
             }else{
                 self.GetOrderList(self.symbol,true,'SELL')
-                if(self.deal.stepSum > 0 && self.wallets[self.baseSym] >= self.deal.stepSum*0.98 && addBuy )
+                // если величина лота есть и она меньше чем сумма в кошельке, то покупаем
+                console.log('self.deal.stepSum = ',self.deal.stepSum, 'wallet', self.wallets[self.baseSym],'addBuy',addBuy)
+                if(self.deal.stepSum > 0 && self.wallets[self.baseSym] >= self.deal.stepSum*0.98 && addBuy ){
+                    console.log('докупаемся ')
                     self.GetOrderList(self.symbol,true,'BUY')
+                }
             }
         })
         
