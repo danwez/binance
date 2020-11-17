@@ -392,6 +392,16 @@ const BinanceApp = function() {
                 break
         }
 
+        let sellOrders = []
+        if(typeTrade == 'BUY'){
+            //выясняем, есть ли в сделке ордер на продажу. Если есть, увеличиваем лимит
+            sellOrders = self.deal.getOrdersByParams({side:'SELL'})
+            if(sellOrders.length > 0 && i<this.depthLimits.length-1)
+                limit = this.depthLimits[i+1]
+        }
+        
+
+
         axios.get(this.url+'/api/v3/depth?symbol='+symbol+'&limit='+limit)
         .then(function (response) {
             
@@ -399,7 +409,7 @@ const BinanceApp = function() {
             let asksum =0;
             let bidsum = 0;
             for(var i in orderbook.asks){
-                if(i <= self.depth){
+                if(i <= self.depth || sellOrders.length > 0){
                     asksum +=  orderbook.asks[i][1]*1;
                     bidsum += orderbook.bids[i][1]*1
                     
