@@ -120,6 +120,20 @@ Deal.prototype.getOrderById = function(id){
     return false
 }
 
+Deal.prototype.getOrderByParams = function(params){
+    let orderList = []
+    for(let i in this.orders){
+        let itIs = true
+        for(j in params){
+            if(params[j] != this.orders[i][j])
+                itIs = false
+            
+        }
+        if(itIs) orderList.push(this.orders[i])
+    }
+    return orderList
+}
+
 Deal.prototype.getOpenOrders = function(){
     let orders = []
     for(let i in this.orders)
