@@ -120,7 +120,7 @@ Deal.prototype.getOrderById = function(id){
     return false
 }
 
-Deal.prototype.getOrderByParams = function(params){
+Deal.prototype.getOrdersByParams = function(params){
     let orderList = []
     for(let i in this.orders){
         let itIs = true
