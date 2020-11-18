@@ -124,7 +124,7 @@ Deal.prototype.getOrdersByParams = function(params){
     let orderList = []
     for(let i in this.orders){
         let itIs = true
-        for(j in params){
+        for(let j in params){
             if(params[j] != this.orders[i][j])
                 itIs = false
             
