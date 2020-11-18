@@ -386,18 +386,20 @@ const BinanceApp = function() {
 
         // определяем глубину стакана
         let limit = 0
+        let lim_index = 0
         for (let i in this.depthLimits){
+            lim_index = i
             limit = this.depthLimits[i]
             if(limit >= self.depth)
                 break
         }
-
+        console.log('lim_index ',lim_index)
         let sellOrders = []
         if(typeTrade == 'BUY'){
             //выясняем, есть ли в сделке ордер на продажу. Если есть, увеличиваем лимит
             sellOrders = self.deal.getOrdersByParams({side:'SELL'})
-            if(sellOrders.length > 0 && i<this.depthLimits.length-1)
-                limit = this.depthLimits[i+1]
+            if(sellOrders.length > 0 && lim_index<this.depthLimits.length-1)
+                limit = this.depthLimits[lim_index+1]
         }
         
 
@@ -433,7 +435,8 @@ const BinanceApp = function() {
             console.log('bid',orderbook.bids[self.maxOrderValumeBid])
             console.log('sum value ask',asksum, ' bid', bidsum)
             let komis = orderbook.asks[self.maxOrderValumeAsk][0]*0.001+orderbook.bids[self.maxOrderValumeBid][0]*0.001
-            console.log('komis',orderbook.asks[self.maxOrderValumeAsk][0]*0.001,' + ',orderbook.bids[self.maxOrderValumeBid][0]*0.001,' = ',komis)
+            if(self.tradeSym == 'BNB') komis = komis * 0.7
+            console.log('komis',' = ',komis)
             let profit = orderbook.asks[self.maxOrderValumeAsk][0] - orderbook.bids[self.maxOrderValumeBid][0]
             console.log('profit = ',profit)
             //trade = false
