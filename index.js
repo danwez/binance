@@ -187,10 +187,10 @@ const BinanceApp = function() {
                 }
                 self.startTrade()
             }
-            self.userDataStreem.socket.onerror = (err) => { console.log(err)}
+            self.userDataStreem.socket.onerror = (err) => { console.log(err.response.data)}
             
             return self.userDataStreem
-        }).catch((err)=>{ console.log(err) })
+        }).catch((err)=>{ console.log(err.response.data) })
         
     }
 
@@ -202,7 +202,7 @@ const BinanceApp = function() {
                     console.log('prolongation ',Date())
                     self.pingUserDataStream(key)
                     self.checkOrders()
-                }).catch((err)=>{ console.log(err) })
+                }).catch((err)=>{ console.log(err.response.data) })
         }, self.lifeTime * 60000);
     }
 
@@ -375,7 +375,7 @@ const BinanceApp = function() {
             //console.log('res.data.serverTime',res.data)
             self.timeCor = res.data.serverTime - Date.now()
             return self.timeCor
-        }).catch(err => console.log(err))
+        }).catch(err => console.log(err.response.data))
         //callback()
     }
 
@@ -388,7 +388,7 @@ const BinanceApp = function() {
         let limit = 0
         let lim_index = 0
         for (let i in this.depthLimits){
-            lim_index = i
+            lim_index = i*1
             limit = this.depthLimits[i]
             if(limit >= self.depth)
                 break
@@ -398,8 +398,9 @@ const BinanceApp = function() {
         if(typeTrade == 'BUY'){
             //выясняем, есть ли в сделке ордер на продажу. Если есть, увеличиваем лимит
             sellOrders = self.deal.getOrdersByParams({side:'SELL'})
-            if(sellOrders.length > 0 && lim_index<this.depthLimits.length-1)
-                limit = this.depthLimits[lim_index+1]
+                if(sellOrders.length > 0)
+                    limit = self.getNextLimit(limit,lim_index)
+            
         }
         
 
@@ -462,12 +463,18 @@ const BinanceApp = function() {
             }
             orderbook = null
         }).catch(err => {
-            console.log(err)
+            console.log(err.response.data)
             setTimeout(function(){self.GetOrderList(symbol,trade,typeTrade)},self.stepTime*1000)
         })
     }
 
-
+    this.getNextLimit = function(limit,lim_index){
+        if(lim_index<this.depthLimits.length-1)
+            if(limit < this.depth*2)
+                limit = this.depthLimits[lim_index+1]
+        console.log('limit ',limit)
+        return limit
+    }
 
     this.buyOrder = async function(params={}){
         self = this
@@ -564,7 +571,7 @@ const BinanceApp = function() {
 
             //self.startTrade()
         }).catch((err)=>{
-            console.log(err)
+            console.log(err.response.data)
             setTimeout(()=>{self.startTrade()},self.stepTime*1000)
         })
         //console.log(orderParams)
@@ -579,12 +586,12 @@ const BinanceApp = function() {
             orderId: orderId,
         }
         let endpoint = '/api/v3/order'
-        this.apiRequest(endpoint,orderParams,true,true,'delete').then(res => {
+        return this.apiRequest(endpoint,orderParams,true,true,'delete').then(res => {
             self.deal.changeOrder(orderId,{status:'CANCELED'})
             console.log(res)
             
         }).catch((err)=>{
-            console.log(err)
+            console.log(err.response.data)
             
         })
         //console.log(orderParams)
@@ -690,7 +697,7 @@ const BinanceApp = function() {
             }
             return self.deal.orders
         }).catch((err)=>{
-            console.log(err)
+            console.log(err.response.data)
             setTimeout(()=>{self.startTrade()},self.stepTime*1000)
         })
 
@@ -720,7 +727,7 @@ const BinanceApp = function() {
         if(this.logOn){
             let now = new Date()
             let date = now.getHours()+':'+now.getMinutes()+':'+now.getSeconds()
-            fs.writeFile('log.txt', '\n\r'+date+' '+ message, { flag: 'a' }, (err) => {console.log(err)})
+            fs.writeFile('log.txt', '\n\r'+date+' '+ message, { flag: 'a' }, (err) => {console.log(err.response.data)})
         }
     }
 
