@@ -1,0 +1,25 @@
+.priceUp.up{
+    color: #119911;
+}
+.priceUp.down{
+    color: #ee3434;
+}
+#closeBlock {
+	height: 700px;
+	width: 1200px;
+	background-image: url(/bg.jpg);
+    position: relative;
+}
+#authForm {
+	position: absolute;
+	height: 50px;
+	width: 120px;
+	top: 305px;
+	left: 556px;
+}
+#authInput {
+	width: 120px;
+	text-align: center;
+	font-weight: bold;
+	color: green;
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, width=device-width"/>
+        <title>Торговый бот</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+        <link rel="stylesheet" href="style.css">
+    </head>
+
+    <body>
+        <div class="container">
+            <h1>Торговый бот</h1>
+
+            <div id="bot_app">
+                <div id="closeBlock" v-if="!auth">
+                    <div id="authForm" @click="letAuth=true">
+                        <input type="password" id="authInput" v-if="letAuth" v-model="password" @keyup.enter="enterAuth()">
+                    </div>
+                </div>
+                <div id="interface" v-if="auth">
+                    <p>{{ now() }}</p>
+                    <p>Profit Today {{profit24}}</p>
+                
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="btn-group symbols">
+                                <button type="button" v-for='(symbol,index) in symbols' :class="symbolBtnClass(symbol)" @click="symbolBtnClick(symbol)">{{symbol.symbol}}</button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <table class="table">
+                                <tbody>
+                                    
+                                    <tr v-if="showWallet(index)" v-for="(wallet,index) in wallets">
+                                        <td>{{index}}</td>
+                                        <td>{{wallet}}</td>
+                                        <td>{{walletsLoc[index]}}</td>
+                                    </tr>
+                                </tbody>
+                                
+                            </table>
+                        </div>
+                        <div class="col-md-3">
+                            <button id="refresh" class="btn btn-success" @click="refreshProc()">&#8635;</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6"></div>
+                        <div class="col-md-3">
+                            <h3> 
+                                Цена: 
+                                <span v-if="priceUp" class="priceUp up">&uArr; {{price}}</span>
+                                <span v-if="!priceUp" class="priceUp down">&dArr; {{price}}</span>
+                                
+                            </h3>
+                        </div>
+                        <div class="col-md-3">
+                            Докупаю при цене: {{stopLoss}} 
+                            <span v-if="blockPrice">block</span>
+                            <span v-if="!blockPrice">Price</span>
+                        </div>
+                    </div>
+                    <h3>Ордера</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Пара</th>
+                                <th>Создан</th>
+                                <th>Направление</th>
+                                <th>Статус</th>
+                                <th>Цена</th>
+                                <th>Количество</th>
+                                <th>Сумма</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(order,index) in orders">
+                                <td>{{order.orderId}}</td>
+                                <td>{{order.symbol}}</td>
+                                <td>{{getDateTime(order.time,'D.MMM YYYY HH:mm:SS')}}</td>
+                                <td>{{order.side}}</td>
+                                <td>{{order.status}}</td>
+                                <td>{{order.price}}</td>
+                                <td>{{order.origQty}}</td>
+                                <td>{{order.price * order.origQty}}</td>
+                                <td><span style="cursor:pointer" @click="cancelOrder(order.orderId)">&#10060;</span></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="7">Профит</td>
+                                <td>{{ calcProfit() }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+        <script src="https://cdn.socket.io/socket.io-3.0.1.min.js"></script>
+        <script src="./moment.min.js"></script>
+        <script src="interface.js"></script>
+    </body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "crypt",
+  "version": "1.1.0",
+  "description": "Trading bot on binance",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Danwez",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "crypto": "^1.0.1",
+    "express": "^4.17.1",
+    "qs": "^6.9.4",
+    "socket.io": "^3.1.0",
+    "ws": "^7.4.2"
+  }
+}
